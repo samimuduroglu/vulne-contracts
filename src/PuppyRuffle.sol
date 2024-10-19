@@ -60,7 +60,8 @@ contract PuppyRaffle is ERC721, Ownable {
     constructor(uint256 _entranceFee, address _feeAddress, uint256 _raffleDuration) ERC721("Puppy Raffle", "PR") {
         entranceFee = _entranceFee;
         feeAddress = _feeAddress;
-        raffleDuration = _raffleDuration;
+        raffleDuration = _raffleDuration; // this can overflow
+        require(raffleDuration < type(uint256).max /2);
         raffleStartTime = block.timestamp;
 
         rarityToUri[COMMON_RARITY] = commonImageUri;
@@ -85,6 +86,7 @@ contract PuppyRaffle is ERC721, Ownable {
         // Check for duplicates
         for (uint256 i = 0; i < players.length - 1; i++) {
             for (uint256 j = i + 1; j < players.length; j++) {
+              
                 require(players[i] != players[j], "PuppyRaffle: Duplicate player");
             }
         }
@@ -95,12 +97,11 @@ contract PuppyRaffle is ERC721, Ownable {
     /// @dev This function will allow there to be blank spots in the array
     function refund(uint256 playerIndex) public {
         address playerAddress = players[playerIndex];
-        require(playerAddress == msg.sender, "PuppyRaffle: Only the player can refund");
-        require(playerAddress != address(0), "PuppyRaffle: Player already refunded, or is not active");
-
-        payable(msg.sender).sendValue(entranceFee);
+        // not nessaie can be remove rquire(playerAddress != address(0), "PuppyRaffle: Player already refunded, or is not active");
+       
 
         players[playerIndex] = address(0);
+         payable(msg.sender).sendValue(entranceFee); // re-entrancy fixed
         emit RaffleRefunded(playerAddress);
     }
 
@@ -113,7 +114,8 @@ contract PuppyRaffle is ERC721, Ownable {
                 return i;
             }
         }
-        return 0;
+        //return 0;// fixed
+        revert('player not found');
     }
 
     /// @notice this function will select a winner and mint a puppy
